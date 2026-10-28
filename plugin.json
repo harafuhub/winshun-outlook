@@ -2,7 +2,7 @@
   "manifest": 1,
   "id": "harafuhub.outlook",
   "name": {"zh": "Outlook 邮件", "en": "Outlook mail"},
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": {"zh": "ol 关键词：通过 Windows 搜索索引查找经典 Outlook 的邮件和附件（PDF、Word、Excel 的内容），Enter 打开", "en": "ol <words>: finds classic Outlook mail and its PDF, Word and Excel attachments by content through the Windows Search index; Enter opens"},
   "author": "harafuhub",
   "license": "MIT",

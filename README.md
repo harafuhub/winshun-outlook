@@ -39,10 +39,14 @@ so Office opens it in Protected View and blocks its macros, as it would from Out
 `sort:from` and `sort:subject` order the 200 newest matches (the index takes seconds to sort a
 whole mailbox by them); the other orders cover every match.
 
-How opening works: the index's `mapi16://` address cannot be started directly, so the plugin
-finds the mail over Outlook COM (folder from the index, received time and subject) and asks
-WinShun to start `OUTLOOK.EXE /select outlook:<EntryID>`. When Outlook is closed, Enter has
-WinShun start it and says so, without waiting for it; press Enter again once it is open.
+How opening works: the index's `mapi16://` address cannot be started directly, but its last
+part is the mail's entry ID (one byte per character, from U+AC00). The plugin asks WinShun to
+start `OUTLOOK.EXE /select outlook:<EntryID>`, which opens the mail in its own window, without
+asking Outlook first. When Outlook is closed, WinShun first starts it without a window
+(`OUTLOOK.EXE -Embedding`), so one Enter still opens only the mail. Opening an attachment needs
+Outlook over COM to save the file: when Outlook is closed, the first Enter opens the attachment's
+mail the same way and asks you to press Enter again for the file. The plugin never waits, and
+never starts Outlook over COM (from WinShun's sandbox that could start a second Outlook).
 Folders whose name contains a `"` are not handed to Outlook's command line (Shift+Enter says so).
 
 **AI:** with Settings → AI assistant → "AI may use plugins" on, the AI can run this search, and
@@ -53,9 +57,10 @@ start of each mail's or attachment's text.
 **Permissions: none.** What it touches, all on this PC as you:
 
 - reads the Windows Search index (OLE DB, `Search.CollatorDSO`), read-only;
-- talks to a running classic Outlook over COM to find a mail, and asks WinShun to start
-  `OUTLOOK.EXE /select …` to show it (or plain `OUTLOOK.EXE` when Outlook is closed); the plugin
-  starts no programs itself;
+- asks WinShun to start `OUTLOOK.EXE /select …` to show a mail (with `OUTLOOK.EXE -Embedding`
+  before it when Outlook is closed); the plugin starts no programs itself;
+- checks whether `OUTLOOK.EXE` is running (process list), and talks to a running classic Outlook
+  over COM to save an attachment you open;
 - writes an attachment you open to `%TEMP%\harafuhub.outlook\` (with the Internet-zone mark) and
   deletes those copies after a day;
 - never goes online itself; only with WinShun's AI option on do results reach the AI (see above).

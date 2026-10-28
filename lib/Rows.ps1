@@ -35,7 +35,7 @@ function ConvertTo-OutlookAttachmentItem {
         $preview = ($Row.Summary -replace '\s+', ' ').Trim()
         if ($preview.Length -gt 300) { $preview = $preview.Substring(0, 300) + '…' }
     }
-    $data = @{ kind = 'attachment'; folder = $Row.Folder; subject = $mailSubject; name = $Row.Name }
+    $data = @{ kind = 'attachment'; folder = $Row.Folder; subject = $mailSubject; name = $Row.Name; id = (ConvertFrom-OutlookIndexUrl $Row.Url) }
     if ($Row.DateUtc) { $data.utc = $Row.DateUtc.ToString('o') }
     $actions = @(
         (New-WinShunAction -Id 'open' -Title (Get-OutlookText $Locale 'Open attachment' '打开附件') -Key 'Enter'),
@@ -73,7 +73,7 @@ function ConvertTo-OutlookItem {
         $preview = ($Row.Summary -replace '\s+', ' ').Trim()
         if ($preview.Length -gt 300) { $preview = $preview.Substring(0, 300) + '…' }
     }
-    $data = @{ folder = $Row.Folder; subject = [string]$Row.Subject }
+    $data = @{ folder = $Row.Folder; subject = [string]$Row.Subject; id = (ConvertFrom-OutlookIndexUrl $Row.Url) }
     if ($Row.DateUtc) { $data.utc = $Row.DateUtc.ToString('o') }
 
     $meta = Get-OutlookMetadata $Row

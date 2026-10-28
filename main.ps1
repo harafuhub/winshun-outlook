@@ -74,18 +74,33 @@ Start-WinShunPlugin -Name 'harafuhub.outlook' -OnQuery {
         default {
             # 'open' (a mail, or an attachment's file) and 'mail' (an attachment's mail).
             try {
+                $id = [string]$data.id
+                $running = Test-OutlookRunning
+                # With Outlook closed, WinShun first starts it without a window (-Embedding);
+                # /select then shows only the mail. The plugin starts no process and never waits.
+                $start = @()
+                if (-not $running) { $start = @(@{ type = 'open'; path = $exe; args = (Get-OutlookStartArgs) }) }
+                if ($id -and -not ($isAttachment -and $a.action -ne 'mail')) {
+                    # A mail: its entry ID comes from the index, so Outlook need not be asked.
+                    return $start + @(@{ type = 'open'; path = $exe; args = (Get-OutlookSelectArgs $id) }, (New-WinShunEffect -Hide))
+                }
+                # An attachment's file, or a row without an ID, needs Outlook over COM. A
+                # windowless Outlook only becomes reachable once it shows a window, so with
+                # Outlook closed the attachment's mail is opened first; the next Enter saves the file.
+                $app = if ($running) { Get-OutlookApp }
+                if ($null -eq $app) {
+                    if (-not $running -and $id) {
+                        return $start + @(@{ type = 'open'; path = $exe; args = (Get-OutlookSelectArgs $id) },
+                            (New-WinShunEffect -Notify (Get-OutlookText $locale 'Outlook was closed: opening the mail… press Enter again for the attachment' 'Outlook 没开：正在打开邮件…再按一次回车打开附件')),
+                            (New-WinShunEffect -Keep))
+                    }
+                    $text = Get-OutlookText $locale 'Outlook is still starting… press Enter again in a moment' 'Outlook 还在启动…请稍后再按一次回车'
+                    return $start + @((New-WinShunEffect -Notify $text), (New-WinShunEffect -Keep))
+                }
                 if (-not $data.utc) { throw (Get-OutlookText $locale 'This item has no date to find it by' '这一项没有日期，找不到') }
                 $utc = Get-ItemDateUtc $data
-                # Finding the mail needs a running Outlook; rather than wait for one, have WinShun
-                # start it (the plugin itself may not start programs) and ask for Enter again.
-                $app = Get-OutlookApp
-                if ($null -eq $app) {
-                    return @(@{ type = 'open'; path = $exe },
-                        (New-WinShunEffect -Notify (Get-OutlookText $locale 'Starting Outlook… press Enter again once it is open' '正在启动 Outlook…打开后请再按一次回车')),
-                        (New-WinShunEffect -Keep))
-                }
                 if ($isAttachment -and $a.action -ne 'mail') {
-                    $path = Save-OutlookAttachment $app ([string]$data.folder) $utc ([string]$data.subject) ([string]$data.name)
+                    $path = Save-OutlookAttachment $app ([string]$data.folder) $utc ([string]$data.subject) ([string]$data.name) -EntryId $id
                     return @((New-WinShunEffect -OpenPath $path), (New-WinShunEffect -Hide))
                 }
                 $mail = Find-OutlookMail $app ([string]$data.folder) $utc ([string]$data.subject)

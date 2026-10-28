@@ -25,9 +25,38 @@ function Get-OutlookSelectArgs([string] $Target) {
 }
 
 function Get-OutlookApp {
-    # The running Outlook, or $null: the plugin does not wait for one to start.
+    # The running Outlook, or $null. Never CoCreate: when the running Outlook
+    # cannot be reached yet, that would start a second one, which fails.
     try { return [Runtime.InteropServices.Marshal]::GetActiveObject('Outlook.Application') } catch { }
     $null
+}
+
+function Test-OutlookRunning { [bool](Get-Process -Name OUTLOOK -ErrorAction SilentlyContinue) }
+
+function Get-OutlookStartArgs {
+    # How COM starts Outlook: no window, and it stays up. A following /select
+    # then opens only the mail, not the main window.
+    '-Embedding'
+}
+
+function ConvertFrom-OutlookIndexUrl([string] $Url) {
+    <#
+    The mail's entry ID from its index address: the last segment of
+    mapi16://…/store/folder/<id> (an attachment's /at=… dropped) holds it one
+    byte per character, as U+AC00 + byte. That PST/OST entry ID (flags, store
+    UID, node) is accepted by GetItemFromID and by OUTLOOK.EXE /select,
+    without asking Outlook first. '' when the address has none.
+    #>
+    $segments = @(($Url -replace '/at=[^/]*$', '').Split('/'))
+    $last = $segments[-1]
+    if (-not $last) { return '' }
+    $hex = New-Object Text.StringBuilder
+    foreach ($c in $last.ToCharArray()) {
+        $b = [int]$c - 0xAC00
+        if ($b -lt 0 -or $b -gt 0xFF) { return '' }
+        [void]$hex.Append($b.ToString('X2'))
+    }
+    $hex.ToString()
 }
 
 function Get-OutlookFolder($App, [string] $IndexFolder) {
@@ -114,8 +143,10 @@ function Save-OutlookAttachment {
     path would lie outside Root.
     #>
     param($App, [string] $IndexFolder, [datetime] $DateUtc, [string] $MailSubject, [string] $Name,
-        [string] $Root = (Get-OutlookAttachmentRoot))
-    $mail = Find-OutlookMail $App $IndexFolder $DateUtc $MailSubject
+        [string] $Root = (Get-OutlookAttachmentRoot), [string] $EntryId)
+    $mail = $null
+    if ($EntryId) { try { $mail = $App.Session.GetItemFromID($EntryId) } catch { } }
+    if ($null -eq $mail) { $mail = Find-OutlookMail $App $IndexFolder $DateUtc $MailSubject }
     if ($null -eq $mail) { throw "Mail not found in Outlook (moved or deleted?)" }
     $attachment = $null
     foreach ($a in $mail.Attachments) {
