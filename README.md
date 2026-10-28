@@ -54,11 +54,16 @@ what it finds goes to the AI: mail subjects, senders, dates, folders, attachment
 start of each mail's or attachment's text.
 **给 AI 用**：打开"AI 可以使用插件"后，AI 可以调用这个搜索，邮件主题、发件人和部分正文会交给 AI。
 
-**Permissions: none.** What it touches, all on this PC as you:
+**Permissions: `processes`**, because opening a mail (or its folder) starts Outlook: Enter has
+WinShun run `OUTLOOK.EXE /select …`, and `OUTLOOK.EXE -Embedding` before it when Outlook is
+closed. Outlook is the only program it starts.
+**权限：`processes`**：打开邮件（或它的文件夹）时要启动 Outlook（`OUTLOOK.EXE /select …`，
+Outlook 没开时先执行 `OUTLOOK.EXE -Embedding`）。插件只启动 Outlook，不启动别的程序。
+
+What it touches, all on this PC as you:
 
 - reads the Windows Search index (OLE DB, `Search.CollatorDSO`), read-only;
-- asks WinShun to start `OUTLOOK.EXE /select …` to show a mail (with `OUTLOOK.EXE -Embedding`
-  before it when Outlook is closed); the plugin starts no programs itself;
+- starts Outlook through WinShun to show a mail or folder (see above), nothing else;
 - checks whether `OUTLOOK.EXE` is running (process list), and talks to a running classic Outlook
   over COM to save an attachment you open;
 - writes an attachment you open to `%TEMP%\harafuhub.outlook\` (with the Internet-zone mark) and
