@@ -1,0 +1,13 @@
+# Packs the plugin and attaches harafuhub.outlook-<version>.wsplugin to the release of each v* tag
+# (LingCore/WinShun-plugins' template).
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  package:
+    permissions:
+      contents: write
+    uses: LingCore/WinShun-plugins/.github/workflows/package.yml@main
